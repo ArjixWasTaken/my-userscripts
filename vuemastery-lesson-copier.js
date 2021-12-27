@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         VueMastery Lesson Description Copier
-// @namespace    https://greasyfork.org/en/users/374516-arjix-gamer
+// @namespace    https://github.com/ArjixWasTaken/my-userscripts
 // @version      0.5
 // @description  Adds a button to copy the lesson description in markdown. (Yes, it converts the html description to markdown)
 // @author       Arjix
