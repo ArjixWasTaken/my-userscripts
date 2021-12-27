@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         BeatBump
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
-// @version      0.1
+// @version      0.2
 // @description  Adds a download button to the context menu of songs at beatbump.ml
 // @author       Arjix
 // @match        https://beatbump.ml/*
