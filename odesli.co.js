@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         odesli.co
-// @namespace    http://tampermonkey.net/
+// @namespace    https://github.com/ArjixWasTaken/my-userscripts
 // @version      0.3
 // @description  Embeds odesli.co inside youtube
 // @author       Arjix
