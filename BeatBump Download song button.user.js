@@ -4,6 +4,7 @@
 // @version      0.3
 // @description  Adds a download button to the context menu of songs at beatbump.ml
 // @author       Arjix
+// @license      MIT
 // @match        https://beatbump.ml/*
 // @icon         https://www.google.com/s2/favicons?domain=beatbump.ml
 // @require      https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js
