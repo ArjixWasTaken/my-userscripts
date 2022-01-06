@@ -4,6 +4,7 @@
 // @version      0.5
 // @description  Adds a button to copy the lesson description in markdown. (Yes, it converts the html description to markdown)
 // @author       Arjix
+// @license      MIT
 // @match        https://www.vuemastery.com/courses/*
 // @icon         https://www.google.com/s2/favicons?domain=vuemastery.com
 // @grant        none
