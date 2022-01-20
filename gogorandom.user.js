@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         GogoRandom
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
-// @version      0.3
+// @version      0.4
 // @description  A userscript that adds a random button to gogoanime, that one feature we all wanted years now but didn't get.
 // @author       Arjix
 // @license      MIT
 // @match        *://*.gogoanime.vc/*
+// @match        *://*.gogoanime.wiki/*
+// @match        *://*.gogoanime.film/*
 // @match        *://*.gogoanime.tv/*
 // @match        *://*.gogoanime.io/*
 // @match        *://*.gogoanime.in/*
