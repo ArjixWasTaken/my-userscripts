@@ -1,16 +1,16 @@
 // ==UserScript==
-// @name        Steam Workshop Downloader
-// @author      ArjixWasTaken
-// @description Quickly download files from the steam workshop- using steamworkshopdownloader.io.
-// @match       *://*.steamcommunity.com/sharedfiles/filedetails/?id=*
-// @match       *://*.steamcommunity.com/workshop/filedetails/?id=*
-// @run-at      document-end
-// @namespace   https://github.com/ArjixWasTaken
-// @grant       GM_xmlhttpRequest
-// @grant       GM_download
-// @license     MIT
-// @version     1.2
-// @icon        http://steamworkshop.download/favicon.ico
+// @name         Steam Workshop Downloader
+// @version      1.2
+// @author       ArjixWasTaken
+// @namespace    https://github.com/ArjixWasTaken/my-userscripts
+// @description  Quickly download files from the steam workshop- using steamworkshopdownloader.io.
+// @match        *://*.steamcommunity.com/sharedfiles/filedetails/?id=*
+// @match        *://*.steamcommunity.com/workshop/filedetails/?id=*
+// @icon         http://steamworkshop.download/favicon.ico
+// @run-at       document-end
+// @grant        GM_xmlhttpRequest
+// @grant        GM_download
+// @license      MIT
 // ==/UserScript==
  
  
