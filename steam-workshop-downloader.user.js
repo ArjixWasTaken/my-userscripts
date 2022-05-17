@@ -1,5 +1,6 @@
 // ==UserScript==
-// @name Steam Workshop Downloader
+// @name        Steam Workshop Downloader
+// @author      ArjixWasTaken
 // @description Quickly download files from the steam workshop- using steamworkshopdownloader.io.
 // @match       *://*.steamcommunity.com/sharedfiles/filedetails/?id=*
 // @match       *://*.steamcommunity.com/workshop/filedetails/?id=*
