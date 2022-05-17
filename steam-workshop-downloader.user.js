@@ -8,7 +8,7 @@
 // @grant       GM_xmlhttpRequest
 // @grant       GM_download
 // @license     MIT
-// @version     1.1
+// @version     1.2
 // @icon        http://steamworkshop.download/favicon.ico
 // ==/UserScript==
  
