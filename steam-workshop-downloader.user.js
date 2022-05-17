@@ -8,8 +8,8 @@
 // @match        *://*.steamcommunity.com/workshop/filedetails/?id=*
 // @icon         http://steamworkshop.download/favicon.ico
 // @run-at       document-end
-// @require      https://raw.githubusercontent.com/Stuk/jszip/c00440a28addc800f924472bf351fc710e118776/dist/jszip.min.js
-// @require      https://raw.githubusercontent.com/eligrey/FileSaver.js/43bbd2f0ae6794f8d452cd360e9d33aef6071234/dist/FileSaver.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jszip/3.9.1/jszip.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        GM_download
 // @grant        unsafeWindow
