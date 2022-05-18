@@ -3,7 +3,7 @@
 // @version      1.4
 // @author       ArjixWasTaken
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
-// @description  Quickly download files from the steam workshop using steamworkshopdownloader.io.
+// @description  Quickly download files from the steam workshop using www.steamworkshop.download
 // @match        *://*.steamcommunity.com/sharedfiles/filedetails/?id=*
 // @match        *://*.steamcommunity.com/workshop/filedetails/?id=*
 // @icon         http://steamworkshop.download/favicon.ico
