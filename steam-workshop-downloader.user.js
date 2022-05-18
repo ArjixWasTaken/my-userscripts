@@ -1,25 +1,50 @@
 // ==UserScript==
 // @name         Steam Workshop Downloader
-// @version      1.3
+// @version      1.4
 // @author       ArjixWasTaken
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
-// @description  Quickly download files from the steam workshop- using steamworkshopdownloader.io.
+// @description  Quickly download files from the steam workshop using steamworkshopdownloader.io.
 // @match        *://*.steamcommunity.com/sharedfiles/filedetails/?id=*
 // @match        *://*.steamcommunity.com/workshop/filedetails/?id=*
 // @icon         http://steamworkshop.download/favicon.ico
 // @run-at       document-end
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jszip/3.9.1/jszip.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js
+// @require      https://openuserjs.org/src/libs/sizzle/GM_config.js
+// @grant        GM.getValue
+// @grant        GM_getValue
+// @grant        GM.setValue
+// @grant        GM_setValue
 // @grant        GM_xmlhttpRequest
-// @grant        GM_download
+// @grant        GM_registerMenuCommand
 // @grant        unsafeWindow
 // @license      MIT
 // ==/UserScript==
 
+
+GM_config.init(
+{
+  'id': 'SteamWorkshopDownloader',
+  'fields':
+  {
+    'batchZipEnabled':
+    {
+      'label': 'Zip-up batch downloads.',
+      'type': 'checkbox',
+      'default': 'false'
+    }
+  }
+});
+
+
+GM_registerMenuCommand('Settings', () => {
+    GM_config.open()
+})
+
 unsafeWindow.JSZip = JSZip;
 unsafeWindow.saveAs = FileSaver.saveAs;
 
-// https://github.com/parshap/node-sanitize-filename/blob/master/index.js
+// stolen from: https://github.com/parshap/node-sanitize-filename/blob/master/index.js
 var illegalRe = /[\/\?<>\\:\*\|"]/g;
 var controlRe = /[\x00-\x1f\x80-\x9f]/g;
 var reservedRe = /^\.+$/;
@@ -66,7 +91,7 @@ unsafeWindow.gm_fetch = gm_fetch
 unsafeWindow.GM_xmlhttpRequest = GM_xmlhttpRequest
 
 
-const GLOBAL_CACHE = {}
+var GLOBAL_LINK_CACHE = {}
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 
@@ -74,7 +99,7 @@ const getDownloadLinkForFile = async (fileId) => {
     const appId = document.querySelector(`a[href*="/app/"]`).href.match(/\/app\/(\d+)/)[1];
     console.log("Attempting to get the download link for", fileId)
 
-    if (GLOBAL_CACHE[fileId] != undefined) return GLOBAL_CACHE[fileId];
+    if (GLOBAL_LINK_CACHE[fileId] != undefined) return GLOBAL_LINK_CACHE[fileId];
 
     const res = await gm_fetch("http://steamworkshop.download/online/steamonline.php", {
         method: "POST",
@@ -89,16 +114,16 @@ const getDownloadLinkForFile = async (fileId) => {
     const data = res.response;
     if (/href=['"].*?['"]/.test(data)) {
         console.log("Found download link.");
-        GLOBAL_CACHE[fileId] = data.match(/href=['"](.*?)['"]/)[1];
-        return GLOBAL_CACHE[fileId];
+        GLOBAL_LINK_CACHE[fileId] = data.match(/href=['"](.*?)['"]/)[1];
+        await GM.setValue("GLOBAL_LINKS_CACHE", GLOBAL_LINK_CACHE)
+        return GLOBAL_LINK_CACHE[fileId];
     } else {
         console.log("No download link found for", fileId);
     }
 }
 
-
-
 document.addEventListener("DOMContentLoaded", async () => {
+    GLOBAL_LINK_CACHE = await GM.getValue("GLOBAL_LINKS_CACHE", {})
     const downloadButton = document.createElement("a");
     downloadButton.id = "SubscribeItemBtn";
     downloadButton.append("Download");
@@ -133,17 +158,27 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (!link) continue;
                 downloadLinks.push([node.parentNode.parentNode.querySelector(`.workshopItemTitle`).innerText.trim(), node.href.match(/id=(\d+)/)[1], link])
             }
+
             console.log("Done gathering all the download links!")
 
-            for (const [title, fileId, link] of downloadLinks) {
-                const data = await gm_fetch(link, { responseType: "blob" })
-                zip.file(sanitizeFilename(`${title} - ${fileId}.zip`), data.response, { binary: true })
+            if (GM_config.get("batchZipEnabled")) {
+                 console.log("batchZip is enabled, zipping all the files...")
+                for (const [title, fileId, link] of downloadLinks) {
+                    const data = await gm_fetch(link, { responseType: "blob" })
+                    zip.file(sanitizeFilename(`${title} - ${fileId}.zip`), data.response, { binary: true })
+                }
+                console.log(zip)
+                zip.generateAsync({type:"blob"})
+                    .then(function (blob) {
+                    saveAs(blob, sanitizeFilename(`${document.querySelector(`.workshopItemTitle`).innerText.trim()} (${window.location.href.match(/id=(\d+)/)[1]}).zip`));
+                });
+            } else {
+                console.log("batchZip is disabled, downloading all the files individually...")
+                for (const [title, fileId, link] of downloadLinks) {
+                    saveAs((await gm_fetch(link, { responseType: "blob" })).response, sanitizeFilename(`${title} (${fileId}).zip`))
+                    await sleep(500)
+                }
             }
-            console.log(zip)
-            zip.generateAsync({type:"blob"})
-                .then(function (blob) {
-                saveAs(blob, sanitizeFilename(`${document.querySelector(`.workshopItemTitle`).innerText.trim()} (${window.location.href.match(/id=(\d+)/)[1]}).zip`));
-            });
         }
     }
 });
