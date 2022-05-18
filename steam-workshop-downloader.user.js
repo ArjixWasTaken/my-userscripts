@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Steam Workshop Downloader
-// @version      1.5
+// @version      1.6
 // @author       ArjixWasTaken
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
 // @description  Quickly download files from the steam workshop using www.steamworkshop.download
@@ -143,13 +143,32 @@ const initiateProgressBar = () => {
 }
 
 
+const getStatusLabel = () => {
+    let statusLabel = document.querySelector("#progress-status-label")
+    if (statusLabel == null) {
+        statusLabel = document.createElement("div")
+        statusLabel.id = "progress-status-label"
+        statusLabel.style.display = "none"
+        let detailBox = document.querySelector(`.detailBox > .game_area_purchase_margin`)
+        if (!detailBox) detailBox = Array.from(document.querySelectorAll(`.detailBox`)).pop()
+        detailBox.insertBefore(statusLabel, detailBox.children[1])
+    }
+    return statusLabel
+}
+
+
+const updateStatusLabel = (status, visibility) => {
+    const statusLabel = getStatusLabel()
+    statusLabel.style.display = visibility ? "" : "none"
+    statusLabel.innerText = "Status: " + status
+}
+
+
 document.addEventListener("DOMContentLoaded", async () => {
     GLOBAL_LINK_CACHE = await GM.getValue("GLOBAL_LINKS_CACHE", {})
     const downloadButton = document.createElement("a");
     downloadButton.id = "SubscribeItemBtn";
     downloadButton.append("Download");
-
-
 
     const collection = document.querySelector(`.subscribeCollection`)
 
@@ -174,12 +193,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         downloadButton.onclick = async () => {
             progressBarNode.style.display = ""
             const fileId = window.location.href.match(/id=(\d+)/)[1];
+            updateStatusLabel("Fetching download link...", true)
             const downloadLink = await getDownloadLinkForFile(fileId);
-            if (downloadLink == undefined) return;
+            if (downloadLink == undefined) {
+                updateStatusLabel("Failed to find download link", true)
+                return
+            };
             const blob = await gm_fetch(downloadLink, { responseType: "blob", onprogress: ({ position, totalSize }) => bar.set(position / totalSize) })
+            updateStatusLabel("Found download link", true)
 
             saveAs(blob.response, sanitizeFilename(`${document.querySelector(`.workshopItemTitle`).innerText.trim()} (${fileId}).zip`))
-            progressBarNode.style.display = "none"
+
+            setTimeout(() => {
+                progressBarNode.style.display = "none"
+                updateStatusLabel("Idle", false)
+            }, 1000)
         };
         document.querySelector(`.game_area_purchase_game > div`).appendChild(downloadButton);
     } else {
@@ -194,15 +222,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.log("Gathering all the download links...")
             const downloadLinks = []
             const fileNodes = Array.from(document.querySelectorAll(`.workshopItem > a[href*="id="]`))
+            updateStatusLabel(`Gathering all the download links (0/${fileNodes.length})`, true)
+
             for (const node of fileNodes) {
-                bar.set((fileNodes.indexOf(node) / fileNodes.length) * (batchZipEnabled ? 0.2 : 1))
+                const i = fileNodes.indexOf(node)+1
+                bar.set((i / fileNodes.length) * (batchZipEnabled ? 0.2 : 1))
+                updateStatusLabel(`Gathering all the download links (${i}/${fileNodes.length})`, true)
                 await sleep(100);
                 const link = await getDownloadLinkForFile(node.href.match(/id=(\d+)/)[1])
                 if (!link) continue;
                 downloadLinks.push([node.parentNode.parentNode.querySelector(`.workshopItemTitle`).innerText.trim(), node.href.match(/id=(\d+)/)[1], link])
             }
+            updateStatusLabel(`Found ${downloadLinks.length} download links out of the ${fileNodes.length} files.`, true)
 
             console.log("Done gathering all the download links!")
+            await sleep(200);
 
             if (batchZipEnabled) {
                 let progressDone = 0.2
@@ -212,23 +246,39 @@ document.addEventListener("DOMContentLoaded", async () => {
                 let i = 0
                 for (const [title, fileId, link] of downloadLinks) {
                     i++;
+                    updateStatusLabel(`Downloading file #${i}...`, true)
                     bar.set(progressDone + (i / downloadLinks.length) * 0.3 )
                     const data = await gm_fetch(link, { responseType: "blob" })
                     zip.file(sanitizeFilename(`${title} - ${fileId}.zip`), data.response, { binary: true })
                 }
-                console.log(zip)
-                zip.generateAsync({type:"blob"}, ({ percent }) => bar.set(0.5 + (percent/100) * 0.5 ))
+                updateStatusLabel(`Done downloading all the files!`, true)
+                await sleep(200);
+
+                zip.generateAsync({type:"blob"}, ({ percent }) => {
+                    bar.set(0.5 + (percent/100) * 0.5)
+                    updateStatusLabel(`Creating archive (${percent.toFixed(2)}%)`, true)
+                })
                     .then(function (blob) {
+                    updateStatusLabel(`Finished creation of the archive!`, true)
                     saveAs(blob, sanitizeFilename(`${document.querySelector(`.workshopItemTitle`).innerText.trim()} (${window.location.href.match(/id=(\d+)/)[1]}).zip`));
-                    progressBarNode.style.display = "none"
+                    setTimeout(() => {
+                        progressBarNode.style.display = "none"
+                        updateStatusLabel("Idle", false)
+                    }, 1000)
                 });
             } else {
                 console.log("batchZip is disabled, downloading all the files individually...")
+                let i = 0
                 for (const [title, fileId, link] of downloadLinks) {
+                    i++;
+                    updateStatusLabel(`Downloading file #${i}...`, true)
                     saveAs((await gm_fetch(link, { responseType: "blob" })).response, sanitizeFilename(`${title} (${fileId}).zip`))
                     await sleep(500)
                 }
-                progressBarNode.style.display = "none"
+                setTimeout(() => {
+                    progressBarNode.style.display = "none"
+                    updateStatusLabel("Idle", false)
+                }, 1000)
             }
         }
     }
