@@ -42,10 +42,20 @@ GM_addStyle(`
 	top: 0px;
 	left: 8px;
 	width: 16px;
-	// background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgc3R5bGU9ImZpbGw6IHJnYmEoMjIwLCAyMjAsIDIyMCwgMSk7Ij4NCiAgICA8cGF0aCBkPSJNMTkgOWgtNFYzSDl2Nkg1bDcgOHpNNCAxOWgxNnYySDR6Ij48L3BhdGg+DQo8L3N2Zz4=");
 	background-position: 0px 0px;
 	background-repeat: no-repeat;
 }`)
+
+
+GM_addStyle(`
+[data-inline-download-btn]::before {
+   content: "↓";
+   position: absolute;
+   transform: translateX(160%) translateY(15%);
+   -webkit-text-stroke: 3px;
+}
+`)
+
 
 // https://boxicons.com/?query=download
 const downArrowIcon = `<div class="downloadIcon"></div>`
@@ -225,6 +235,7 @@ const injectDownloadButtons = async () => {
         downloadProgress.style.height = "30px"
         downloadProgress.style.cursor = "pointer"
         downloadProgress.style.marginTop = "100%"
+        downloadProgress.dataset.inlineDownloadBtn = undefined
 
         const bar = new ProgressBar.Circle(downloadProgress, {
             color: '#FFEA82',
@@ -259,7 +270,6 @@ const injectDownloadButtons = async () => {
         }
         subscriptionControls.appendChild(downloadProgress)
     }
-
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
