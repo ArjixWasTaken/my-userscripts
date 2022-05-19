@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Steam Workshop Downloader
-// @version      1.7
+// @version      1.8
 // @author       ArjixWasTaken
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
 // @description  Quickly download files from the steam workshop using www.steamworkshop.download
@@ -22,16 +22,6 @@
 // @license      MIT
 // ==/UserScript==
 
-/*
-const BoxIcons = document.createElement("link")
-BoxIcons.rel  = "stylesheet"
-BoxIcons.type = "text/css"
-BoxIcons.id = "BoxIcons"
-BoxIcons.href = "https://unpkg.com/boxicons@2.1.2/dist/boxicons.js"
-document.head.appendChild(BoxIcons)
-*/
-
-
 // https://stackoverflow.com/a/33176845/13077523
 function GM_addStyle(css) {
   const style = document.getElementById("GM_addStyleBy8626") || (function() {
@@ -45,6 +35,7 @@ function GM_addStyle(css) {
   sheet.insertRule(css, (sheet.rules || sheet.cssRules || []).length);
 }
 //
+
 
 GM_addStyle(`
 .downloadIcon {
@@ -207,11 +198,22 @@ const updateStatusLabel = (status, visibility) => {
     statusLabel.innerText = "Status: " + status
 }
 
-
-
+const animateShake = (node) => {
+    return node.animate([
+        { transform: 'translate(15px)' }, //  0%
+        { transform: 'translate(-15px)' },// 20%
+        { transform: 'translate(10px)' }, // 40%
+        { transform: 'translate(-10px)' },// 60%
+        { transform: 'translate(5px)' },  // 80%
+        { transform: 'translate(0px)' }, // 100%
+    ], {
+        duration: 500, // half a second
+        iterations: 1, //  run once
+        easing: "linear"
+    })
+}
 
 const injectDownloadButtons = async () => {
-
     const collectionItems = Array.from(document.querySelectorAll(".collectionItem"))
     for (const collectionItem of collectionItems) {
         const fileId = collectionItem.outerHTML.match(/href=["'].*?id=(\d+)["']/)?.[1]
@@ -245,7 +247,10 @@ const injectDownloadButtons = async () => {
             await sleep(200)
 
             if (downloadLink == undefined) {
-                await bar.animate(0)
+                bar.animate(0)
+                await sleep(200)
+                animateShake(downloadProgress).onfinish = () => { downloadProgress.onclick = () => animateShake(downloadProgress) }
+                // remove the onclick event, therefore disabling the "button"
                 return
             };
 
