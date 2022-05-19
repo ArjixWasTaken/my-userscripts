@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Steam Workshop Downloader
-// @version      1.8
+// @version      1.9
 // @author       ArjixWasTaken
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
 // @description  Quickly download files from the steam workshop using www.steamworkshop.download
@@ -181,7 +181,7 @@ const initiateProgressBar = () => {
         progressBar.height = "8px"
         progressBar.style.display = "none"
         let detailBox = document.querySelector(`.detailBox > .game_area_purchase_margin`)
-        if (!detailBox) detailBox = Array.from(document.querySelectorAll(`.detailBox`)).pop()
+        if (!detailBox) detailBox = document.querySelector(`#mainContentsCollection .detailBox:not(.workshopItemDetails)`)
         detailBox.insertBefore(progressBar, detailBox.children[0])
     }
     return progressBar
@@ -195,7 +195,7 @@ const getStatusLabel = () => {
         statusLabel.id = "progress-status-label"
         statusLabel.style.display = "none"
         let detailBox = document.querySelector(`.detailBox > .game_area_purchase_margin`)
-        if (!detailBox) detailBox = Array.from(document.querySelectorAll(`.detailBox`)).pop()
+        if (!detailBox) detailBox = document.querySelector(`#mainContentsCollection .detailBox:not(.workshopItemDetails)`)
         detailBox.insertBefore(statusLabel, detailBox.children[1])
     }
     return statusLabel
@@ -294,7 +294,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         to: {color: '#ED6A5A'},
         step: (state, bar) => {
             bar.path.setAttribute('stroke', state.color);
-        }
+        },
+        duration: 200
     });
 
     if (collection == null) {
@@ -330,6 +331,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         downloadButton.className = "general_btn subscribe"
         collection.insertBefore(downloadButton, document.querySelector(`a.general_btn + span.general_btn.subscribe + div`))
         downloadButton.onclick = async () => {
+            bar.set(0)
             const batchZipEnabled = GM_config.get("batchZipEnabled")
             progressBarNode.style.display = ""
 
@@ -340,7 +342,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             for (const node of fileNodes) {
                 const i = fileNodes.indexOf(node)+1
-                bar.set((i / fileNodes.length) * (batchZipEnabled ? 0.2 : 1))
+                bar.set((i / fileNodes.length) * 0.3)
                 updateStatusLabel(`Gathering all the download links (${i}/${fileNodes.length})`, true)
                 await sleep(100);
                 const link = await getDownloadLinkForFile(node.href.match(/id=(\d+)/)[1])
@@ -353,7 +355,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             await sleep(200);
 
             if (batchZipEnabled) {
-                let progressDone = 0.2
+                let progressDone = 0.3
 
                 const zip = new JSZip();
                 console.log("batchZip is enabled, zipping all the files...")
@@ -361,7 +363,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 for (const [title, fileId, link] of downloadLinks) {
                     i++;
                     updateStatusLabel(`Downloading file #${i}...`, true)
-                    bar.animate(progressDone + (i / downloadLinks.length) * 0.3 )
+                    bar.set(progressDone + (i / downloadLinks.length) * 0.4 )
                     const data = await gm_fetch(link, { responseType: "blob" })
                     zip.file(sanitizeFilename(`${title} - ${fileId}.zip`), data.response, { binary: true })
                 }
@@ -369,7 +371,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 await sleep(200);
 
                 zip.generateAsync({type:"blob"}, ({ percent }) => {
-                    bar.animate(0.5 + (percent/100) * 0.5)
+                    bar.animate(0.7 + (percent/100) * 0.3)
                     updateStatusLabel(`Creating archive (${percent.toFixed(2)}%)`, true)
                 })
                     .then(function (blob) {
@@ -387,6 +389,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     i++;
                     updateStatusLabel(`Downloading file #${i}...`, true)
                     saveAs((await gm_fetch(link, { responseType: "blob" })).response, sanitizeFilename(`${title} (${fileId}).zip`))
+                    bar.animate(0.3 + (i / downloadLinks.length) * 0.7)
                     await sleep(500)
                 }
                 setTimeout(() => {
