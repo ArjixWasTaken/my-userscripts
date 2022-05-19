@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Steam Workshop Downloader
-// @version      1.6
+// @version      1.8
 // @author       ArjixWasTaken
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
 // @description  Quickly download files from the steam workshop using www.steamworkshop.download
@@ -22,6 +22,54 @@
 // @license      MIT
 // ==/UserScript==
 
+// https://stackoverflow.com/a/33176845/13077523
+function GM_addStyle(css) {
+  const style = document.getElementById("GM_addStyleBy8626") || (function() {
+    const style = document.createElement('style');
+    style.type = 'text/css';
+    style.id = "GM_addStyleBy8626";
+    document.head.appendChild(style);
+    return style;
+  })();
+  const sheet = style.sheet;
+  sheet.insertRule(css, (sheet.rules || sheet.cssRules || []).length);
+}
+//
+
+
+GM_addStyle(`
+.downloadIcon {
+	top: 0px;
+	left: 8px;
+	width: 16px;
+	background-position: 0px 0px;
+	background-repeat: no-repeat;
+}`)
+
+
+GM_addStyle(`
+[data-inline-download-btn]::before {
+   content: "↓";
+   position: absolute;
+   transform: translateX(160%) translateY(15%);
+   -webkit-text-stroke: 3px;
+}
+`)
+
+
+// https://boxicons.com/?query=download
+const downArrowIcon = `<div class="downloadIcon"></div>`
+const downloadButtonText = `<span class="downloadBtnText">Download</span>`
+const downloadButtonHTML = `${downArrowIcon}${downloadButtonText}`
+
+const getDownloadIcon = () => {
+    const cuadrado = document.createElement("div"); cuadrado.className = "cuadrado";
+    const triangulo = document.createElement("div"); triangulo.className = "triangulo";
+    const base = document.createElement("div"); base.className = "base";
+    const i = document.createElement("i");
+    i.appendChild(cuadrado); i.appendChild(triangulo); i.appendChild(base)
+    return i
+}
 
 GM_config.init(
 {
@@ -36,7 +84,6 @@ GM_config.init(
     }
   }
 });
-
 
 GM_registerMenuCommand('Settings', () => {
     GM_config.open()
@@ -77,7 +124,6 @@ const sanitizeFilename = function (input, options) {
 };
 //
 
-
 const gm_fetch = (link, options) => {
     return new Promise((resolve, reject) => {
         const data = {
@@ -92,7 +138,6 @@ const gm_fetch = (link, options) => {
 }
 unsafeWindow.gm_fetch = gm_fetch
 unsafeWindow.GM_xmlhttpRequest = GM_xmlhttpRequest
-
 
 var GLOBAL_LINK_CACHE = {}
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -163,12 +208,77 @@ const updateStatusLabel = (status, visibility) => {
     statusLabel.innerText = "Status: " + status
 }
 
+const animateShake = (node) => {
+    return node.animate([
+        { transform: 'translate(15px)' }, //  0%
+        { transform: 'translate(-15px)' },// 20%
+        { transform: 'translate(10px)' }, // 40%
+        { transform: 'translate(-10px)' },// 60%
+        { transform: 'translate(5px)' },  // 80%
+        { transform: 'translate(0px)' }, // 100%
+    ], {
+        duration: 500, // half a second
+        iterations: 1, //  run once
+        easing: "linear"
+    })
+}
+
+const injectDownloadButtons = async () => {
+    const collectionItems = Array.from(document.querySelectorAll(".collectionItem"))
+    for (const collectionItem of collectionItems) {
+        const fileId = collectionItem.outerHTML.match(/href=["'].*?id=(\d+)["']/)?.[1]
+        const title = collectionItem.querySelector(".workshopItemTitle").innerText.trim()
+        const subscriptionControls = collectionItem.querySelector(".subscriptionControls")
+
+        const downloadProgress = document.createElement("div")
+        downloadProgress.style.width = "30px"
+        downloadProgress.style.height = "30px"
+        downloadProgress.style.cursor = "pointer"
+        downloadProgress.style.marginTop = "100%"
+        downloadProgress.dataset.inlineDownloadBtn = undefined
+
+        const bar = new ProgressBar.Circle(downloadProgress, {
+            color: '#FFEA82',
+            trailColor: '#eee',
+            trailWidth: 1,
+            duration: 2000,
+            easing: 'bounce',
+            strokeWidth: 6,
+            from: {color: '#FFEA82', a:0},
+            to: {color: '#ED6A5A', a:1},
+            step: function(state, circle) {
+                circle.path.setAttribute('stroke', state.color);
+            }
+        });
+
+        downloadProgress.onclick = async () => {
+            await bar.animate(0.1)
+            const downloadLink = await getDownloadLinkForFile(fileId);
+            await bar.animate(0.2)
+            await sleep(200)
+
+            if (downloadLink == undefined) {
+                bar.animate(0)
+                await sleep(200)
+                animateShake(downloadProgress).onfinish = () => { downloadProgress.onclick = () => animateShake(downloadProgress) }
+                // remove the onclick event, therefore disabling the "button"
+                return
+            };
+
+            const blob = await gm_fetch(downloadLink, { responseType: "blob", onprogress: ({ position, totalSize }) => bar.animate( 0.2 + (position / totalSize) * 0.8 ) })
+            saveAs(blob.response, sanitizeFilename(`${title} (${fileId}).zip`))
+        }
+        subscriptionControls.appendChild(downloadProgress)
+    }
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
     GLOBAL_LINK_CACHE = await GM.getValue("GLOBAL_LINKS_CACHE", {})
-    const downloadButton = document.createElement("a");
-    downloadButton.id = "SubscribeItemBtn";
-    downloadButton.append("Download");
+
+    injectDownloadButtons()
+
+    const downloadButton = document.createElement("span");
+    downloadButton.innerHTML = downloadButtonHTML
 
     const collection = document.querySelector(`.subscribeCollection`)
 
@@ -199,9 +309,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 updateStatusLabel("Failed to find download link", true)
                 return
             };
-            const blob = await gm_fetch(downloadLink, { responseType: "blob", onprogress: ({ position, totalSize }) => bar.set(position / totalSize) })
             updateStatusLabel("Found download link", true)
-
+            const blob = await gm_fetch(downloadLink, { responseType: "blob", onprogress: ({ position, totalSize }) => bar.animate(position / totalSize) })
             saveAs(blob.response, sanitizeFilename(`${document.querySelector(`.workshopItemTitle`).innerText.trim()} (${fileId}).zip`))
 
             setTimeout(() => {
@@ -212,7 +321,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelector(`.game_area_purchase_game > div`).appendChild(downloadButton);
     } else {
         // Batch file download
-        downloadButton.append(" All")
+        downloadButton.style.alignItems = "";
+        downloadButton.style.justifyContent = "";
+
+        const svg = downloadButton.querySelector("span")
+
+        downloadButton.children[1].append(" All")
         downloadButton.className = "general_btn subscribe"
         collection.insertBefore(downloadButton, document.querySelector(`a.general_btn + span.general_btn.subscribe + div`))
         downloadButton.onclick = async () => {
@@ -247,7 +361,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 for (const [title, fileId, link] of downloadLinks) {
                     i++;
                     updateStatusLabel(`Downloading file #${i}...`, true)
-                    bar.set(progressDone + (i / downloadLinks.length) * 0.3 )
+                    bar.animate(progressDone + (i / downloadLinks.length) * 0.3 )
                     const data = await gm_fetch(link, { responseType: "blob" })
                     zip.file(sanitizeFilename(`${title} - ${fileId}.zip`), data.response, { binary: true })
                 }
@@ -255,7 +369,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 await sleep(200);
 
                 zip.generateAsync({type:"blob"}, ({ percent }) => {
-                    bar.set(0.5 + (percent/100) * 0.5)
+                    bar.animate(0.5 + (percent/100) * 0.5)
                     updateStatusLabel(`Creating archive (${percent.toFixed(2)}%)`, true)
                 })
                     .then(function (blob) {
