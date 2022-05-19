@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Steam Workshop Downloader
-// @version      1.9
+// @version      1.9dev
 // @author       ArjixWasTaken
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
 // @description  Quickly download files from the steam workshop using www.steamworkshop.download
