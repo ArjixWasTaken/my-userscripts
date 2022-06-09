@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Steam Workshop Downloader
-// @version      2.0
+// @version      2.1
 // @author       ArjixWasTaken
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
 // @description  Quickly download files from the steam workshop using www.steamworkshop.download
@@ -152,9 +152,8 @@ const getDownloadLinkForFile = async (fileId) => {
 
     if (GLOBAL_LINK_CACHE[fileId] != undefined) return GLOBAL_LINK_CACHE[fileId];
 
-    const res = await gm_fetch("http://steamworkshop.download/online/steamonline.php", {
-        method: "POST",
-        data: `app=${appId}&item=${fileId}`,
+    const res = await gm_fetch(`http://steamworkshop.download/download/view/${fileId}`, {
+        method: "GET",
         headers: {
             "Content-Type": "application/x-www-form-urlencoded",
             Host: "steamworkshop.download",
@@ -163,9 +162,9 @@ const getDownloadLinkForFile = async (fileId) => {
         },
     });
     const data = res.response;
-    if (/href=['"].*?['"]/.test(data)) {
+    if (/href=['"].*?['"]\s+target=['"]_blank['"]/.test(data)) {
         console.log("Found download link.");
-        GLOBAL_LINK_CACHE[fileId] = data.match(/href=['"](.*?)['"]/)[1];
+        GLOBAL_LINK_CACHE[fileId] = data.match(/href=['"](.*?)['"]\s+target=['"]_blank['"]/)[1];
         await GM.setValue("GLOBAL_LINKS_CACHE", GLOBAL_LINK_CACHE);
         return GLOBAL_LINK_CACHE[fileId];
     } else {
