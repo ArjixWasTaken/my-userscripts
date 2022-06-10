@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Steam Workshop Downloader
-// @version      2.1
+// @version      2.3
 // @author       ArjixWasTaken
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
 // @description  Quickly download files from the steam workshop using www.steamworkshop.download
@@ -94,9 +94,14 @@ GM_config.init({
         },
     },
 });
-
+var GLOBAL_LINK_CACHE = {};
 GM_registerMenuCommand("Settings", () => {
     GM_config.open();
+});
+
+GM_registerMenuCommand("Reset links cache", async () => {
+    await GM.setValue("GLOBAL_LINKS_CACHE", GLOBAL_LINK_CACHE);
+    GLOBAL_LINK_CACHE = {}
 });
 
 // stolen from: https://github.com/parshap/node-sanitize-filename/blob/master/index.js
@@ -133,7 +138,7 @@ const gm_fetch = (link, options) => {
     return new Promise((resolve, reject) => {
         const data = {
             ...options,
-            method: options.method || "GET",
+            method: options?.method || "GET",
             url: link,
             onload: (res) => resolve(res),
         };
@@ -143,7 +148,7 @@ const gm_fetch = (link, options) => {
 };
 unsafeWindow.gm_fetch = gm_fetch;
 
-var GLOBAL_LINK_CACHE = {};
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const getDownloadLinkForFile = async (fileId) => {
@@ -152,8 +157,11 @@ const getDownloadLinkForFile = async (fileId) => {
 
     if (GLOBAL_LINK_CACHE[fileId] != undefined) return GLOBAL_LINK_CACHE[fileId];
 
-    const res = await gm_fetch(`http://steamworkshop.download/download/view/${fileId}`, {
-        method: "GET",
+    const steamWorkshopDownload = (await gm_fetch(`http://steamworkshop.download/download/view/${fileId}`)).response
+
+    const res = await gm_fetch("http://steamworkshop.download/online/steamonline.php", {
+        method: "POST",
+        data: `app=${appId}&item=${fileId}`,
         headers: {
             "Content-Type": "application/x-www-form-urlencoded",
             Host: "steamworkshop.download",
@@ -162,14 +170,26 @@ const getDownloadLinkForFile = async (fileId) => {
         },
     });
     const data = res.response;
-    if (/href=['"].*?['"]\s+target=['"]_blank['"]/.test(data)) {
+    if (/href=['"].*?['"]/.test(data)) {
+
         console.log("Found download link.");
-        GLOBAL_LINK_CACHE[fileId] = data.match(/href=['"](.*?)['"]\s+target=['"]_blank['"]/)[1];
+        GLOBAL_LINK_CACHE[fileId] = data.match(/href=['"](.*?)['"]/)[1];
         await GM.setValue("GLOBAL_LINKS_CACHE", GLOBAL_LINK_CACHE);
         return GLOBAL_LINK_CACHE[fileId];
-    } else {
-        console.log("No download link found for", fileId);
+
+    } else if (/href=['"](.*?)['"].*?>Download/.test(steamWorkshopDownload) && /Filename:\s+.*?\.([\w\d]+)</.test(steamWorkshopDownload)) {
+
+        const uri = new URL(steamWorkshopDownload.match(/href=['"](.*?)['"].*?>Download/)[1])
+
+        if (uri.origin != "http://steamworkshop.download") {
+            console.log("Found download link.");
+            GLOBAL_LINK_CACHE[fileId] = uri.toString() + "^EXTENSION^=" + steamWorkshopDownload.match(/Filename:\s+.*?\.([\w\d]+)</)[1]
+            await GM.setValue("GLOBAL_LINKS_CACHE", GLOBAL_LINK_CACHE);
+            return GLOBAL_LINK_CACHE[fileId];
+        }
+
     }
+    console.log("No download link found for", fileId);
 };
 
 const initiateProgressBar = () => {
@@ -255,7 +275,13 @@ const injectDownloadButtons = async () => {
 
         downloadProgress.onclick = async () => {
             await bar.animate(0.1);
-            const downloadLink = await getDownloadLinkForFile(fileId);
+            let downloadLink = await getDownloadLinkForFile(fileId);
+            let extension = "zip"
+
+            if (downloadLink.split("^EXTENSION^=").length == 2) {
+                [downloadLink, extension] = downloadLink.split("^EXTENSION^=")
+            }
+
             await bar.animate(0.2);
             await sleep(200);
 
@@ -263,9 +289,9 @@ const injectDownloadButtons = async () => {
                 bar.animate(0);
                 await sleep(200);
                 animateShake(downloadProgress).onfinish = () => {
+                    // remove the onclick event, therefore disabling the "button"
                     downloadProgress.onclick = () => animateShake(downloadProgress);
                 };
-                // remove the onclick event, therefore disabling the "button"
                 return;
             }
 
@@ -273,7 +299,7 @@ const injectDownloadButtons = async () => {
                 responseType: "blob",
                 onprogress: ({ position, totalSize }) => bar.animate(0.2 + (position / totalSize) * 0.8),
             });
-            saveAs(blob.response, sanitizeFilename(`${title} (${fileId}).zip`));
+            saveAs(blob.response, sanitizeFilename(`${title} (${fileId}).${extension}`));
         };
         subscriptionControls.appendChild(downloadProgress);
     }
@@ -322,17 +348,26 @@ queue(async () => {
             progressBarNode.style.display = "";
             const fileId = window.location.href.match(/id=(\d+)/)[1];
             updateStatusLabel("Fetching download link...", true);
-            const downloadLink = await getDownloadLinkForFile(fileId);
+
+            let downloadLink = await getDownloadLinkForFile(fileId);
+
             if (downloadLink == undefined) {
                 updateStatusLabel("Failed to find download link", true);
                 return;
             }
+
+            let extension = "zip"
+
+            if (downloadLink.split("^EXTENSION^=").length == 2) {
+                [downloadLink, extension] = downloadLink.split("^EXTENSION^=")
+            }
+
             updateStatusLabel("Found download link", true);
             const blob = await gm_fetch(downloadLink, {
                 responseType: "blob",
                 onprogress: ({ position, totalSize }) => bar.animate(position / totalSize),
             });
-            saveAs(blob.response, sanitizeFilename(`${document.querySelector(`.workshopItemTitle`).innerText.trim()} (${fileId}).zip`));
+            saveAs(blob.response, sanitizeFilename(`${document.querySelector(`.workshopItemTitle`).innerText.trim()} (${fileId}).${extension}`));
 
             setTimeout(() => {
                 progressBarNode.style.display = "none";
@@ -388,8 +423,14 @@ queue(async () => {
 
                 for (const item of downloadLinks) {
                     bar.animate(0.6 + (downloadLinks.indexOf(item) / downloadLinks.length) * 0.4);
-                    const [title, fileId, link] = item;
-                    txt += `${link}\n  out=${sanitizeFilename(title + " (" + fileId + ")")}.zip\n`;
+                    let [title, fileId, link] = item;
+                    let extension = "zip"
+
+                    if (link.split("^EXTENSION^=").length == 2) {
+                        [link, extension] = link.split("^EXTENSION^=")
+                    }
+
+                    txt += `${link}\n  out=${sanitizeFilename(title + " (" + fileId + ")")}.${extension}\n`;
                 }
 
                 const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
@@ -412,13 +453,21 @@ queue(async () => {
                 const zip = new JSZip();
                 console.log("batchZip is enabled, zipping all the files...");
                 let i = 0;
-                for (const [title, fileId, link] of downloadLinks) {
+                for (let [title, fileId, link] of downloadLinks) {
                     i++;
                     updateStatusLabel(`Downloading file #${i}...`, true);
                     bar.set(progressDone + (i / downloadLinks.length) * 0.4);
+
+                    let extension = "zip"
+
+                    if (link.split("^EXTENSION^=").length == 2) {
+                        [link, extension] = link.split("^EXTENSION^=")
+                    }
+
                     const data = await gm_fetch(link, { responseType: "blob" });
-                    zip.file(sanitizeFilename(`${title} - ${fileId}.zip`), data.response, { binary: true });
+                    zip.file(sanitizeFilename(`${title} - ${fileId}.${extension}`), data.response, { binary: true });
                 }
+
                 updateStatusLabel(`Done downloading all the files!`, true);
                 await sleep(200);
 
@@ -441,10 +490,16 @@ queue(async () => {
             } else {
                 console.log("batchZip is disabled, downloading all the files individually...");
                 let i = 0;
-                for (const [title, fileId, link] of downloadLinks) {
+                for (let [title, fileId, link] of downloadLinks) {
                     i++;
                     updateStatusLabel(`Downloading file #${i}...`, true);
-                    saveAs((await gm_fetch(link, { responseType: "blob" })).response, sanitizeFilename(`${title} (${fileId}).zip`));
+                    let extension = "zip"
+
+                    if (link.split("^EXTENSION^=").length == 2) {
+                        [link, extension] = link.split("^EXTENSION^=")
+                    }
+
+                    saveAs((await gm_fetch(link, { responseType: "blob" })).response, sanitizeFilename(`${title} (${fileId}).${extension}`));
                     bar.animate(0.3 + (i / downloadLinks.length) * 0.7);
                     await sleep(500);
                 }
