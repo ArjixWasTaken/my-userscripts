@@ -4,7 +4,7 @@
 // @version      1.1
 // @description  Downloads an archive of all the images contained in a single post of hentai-cosplays.com
 // @author       ArjixWasTaken
-// @match        https://hentai-cosplays.com/image/*/page/*
+// @match        https://hentai-cosplays.com/image/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=hentai-cosplays.com
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jszip/3.9.1/jszip.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js
