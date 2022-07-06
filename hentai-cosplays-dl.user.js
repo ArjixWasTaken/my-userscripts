@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HentaiCosplays Batch Downloader
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
-// @version      1.1
+// @version      1.2
 // @description  Downloads an archive of all the images contained in a single post of hentai-cosplays.com
 // @author       ArjixWasTaken
 // @match        https://hentai-cosplays.com/image/*
