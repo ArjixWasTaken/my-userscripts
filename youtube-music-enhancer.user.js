@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Youtube Music Enhancer
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
-// @version      0.0.1
+// @version      0.0.2
 // @description  Port of some of the plugins available at https://github.com/th-ch/youtube-music
 // @author       Arjix
 // @license      MIT
