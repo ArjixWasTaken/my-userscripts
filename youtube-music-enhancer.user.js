@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Youtube Music Enhancer
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
-// @version      0.0.2
+// @version      0.0.3
 // @description  Port of some of the plugins available at https://github.com/th-ch/youtube-music
 // @author       Arjix
 // @license      MIT
@@ -445,7 +445,7 @@ const addPreciseVolume = (options) => {
         console.log("debug", 2);
         document
             .querySelector("video")
-            .addEventListener("srcChanged", () => moveVolumeHud(videoMode()));
+            .addEventListener("srcChanged", () => {});
     }
 
     setVolume(options.volume);
