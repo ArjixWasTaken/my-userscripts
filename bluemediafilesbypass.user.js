@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         IGG Games Bypass
 // @namespace    http://tampermonkey.net/
-// @version      0.3
+// @version      0.4
 // @author       Arjix
 // @match        *://bluemediafile.site/url-generator*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=bluemediafile.site
@@ -28,6 +28,8 @@ new MutationObserver(async (mutations, observer) => {
                     child.innerHTML = src.replace(/var Time_Start = (.*?);/, (m, t) => `var Time_Start = ${t}-(10*1000)`);
                 } else { child.remove(); }
             }
+
+            if (child.tagName === "FORM") { child.style.display = "none"; }
 
             if (child.id?.startsWith("ads-") || child.id === "anti-adblock" || child?.nodeName === "#comment") child.remove();
             else if (child?.matches?.('.item')) child.remove();
