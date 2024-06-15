@@ -1,13 +1,15 @@
 // ==UserScript==
 // @name         IGG Games Bypass
 // @namespace    https://github.com/ArjixWasTaken/my-userscripts
-// @version      0.5
+// @version      0.6
 // @author       Arjix
 // @match        *://*/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=bluemediafile.site
 // @grant        none
 // @run-at       document-start
 // @description  Bypasses the 6 second countdown that bluemediafiles has.
+// @downloadURL https://update.greasyfork.org/scripts/478002/IGG%20Games%20Bypass.user.js
+// @updateURL https://update.greasyfork.org/scripts/478002/IGG%20Games%20Bypass.meta.js
 // ==/UserScript==
 
 /* global nut */
@@ -43,7 +45,7 @@ new MutationObserver(async (mutations, observer) => {
           child.innerHTML = src.replace(
             /var Time_Start = (.*?);/,
             (m, t) => `var Time_Start = ${t}-(10*1000)`
-          );
+          ).replace('return;', '');
         } else {
           child.remove();
         }
